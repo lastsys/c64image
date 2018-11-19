@@ -33,6 +33,10 @@ var C64Colors = [16]color.RGBA{
 
 var UnsupportedStrideError = fmt.Errorf("unsupported stride")
 
+func almostZero(x float64) bool {
+	return math.Abs(x) < 1e-8
+}
+
 type cielab struct {
 	l float64
 	a float64
@@ -66,8 +70,8 @@ const (
 )
 
 const (
-	deg2rad = math.Pi / 360.
-	rad2deg = 360. / math.Pi
+	deg2rad = math.Pi / 180.
+	rad2deg = 180. / math.Pi
 )
 
 func LoadImage(filename string) (*image.RGBA, error) {
@@ -272,24 +276,7 @@ func cie94distance(col1 cielab, col2 cielab) float64 {
 }
 
 func cielab2hue(a, b float64) float64 {
-	var bias = 0.0
-	if a >= 0. && math.Abs(b) < 1e-6 {
-		return 0.
-	} else if a < 0. && math.Abs(b) < 1e-6 {
-		return 180.
-	} else if math.Abs(a) < 1e-6 && b > 0. {
-		return 90.
-	} else if math.Abs(a) < 1e-6 && b < 0. {
-		return 270.
-	} else if a > 0. && b > 0. {
-		bias = 0.
-	} else if a < 0. {
-		bias = 180.
-	} else if a > 0. && b < 0. {
-		bias = 360.
-	}
-
-	return rad2deg*math.Atan(b/a) + bias
+	return math.Atan2(b, a) * rad2deg
 }
 
 func cie2000distance(col1 cielab, col2 cielab) float64 {
@@ -306,10 +293,10 @@ func cie2000distance(col1 cielab, col2 cielab) float64 {
 	xDL := col2.l - col1.l
 	xDC := xC2 - xC1
 	var xDH float64
-	if math.Abs(xC1*xC2) < 1e-6 {
-		xDH = 0
+	if almostZero(xC1 * xC2) {
+		xDH = 0.
 	} else {
-		xNN = math.Round(xH2 - xH1)
+		xNN = xH2 - xH1 // round to 12 decimal places???
 		if math.Abs(xNN) <= 180. {
 			xDH = xH2 - xH1
 		} else {
@@ -320,14 +307,14 @@ func cie2000distance(col1 cielab, col2 cielab) float64 {
 			}
 		}
 	}
-	xDH = 2. * math.Sqrt(xC1*xC1) * math.Sin(deg2rad*(xDH/2.))
+	xDH = 2. * math.Sqrt(xC1*xC2) * math.Sin(deg2rad*(xDH/2.))
 	xLX := (col1.l + col2.l) / 2.
 	xCY := (xC1 + xC2) / 2.
 	var xHX float64
-	if math.Abs(xC1*xC2) < 1e-6 {
+	if almostZero(xC1 * xC2) {
 		xHX = xH1 + xH2
 	} else {
-		xNN = math.Abs(math.Round(xH1 - xH2))
+		xNN = math.Abs(xH1 - xH2) // round to 12 decimal places???
 		if xNN > 180. {
 			if (xH2 + xH1) < 360. {
 				xHX = xH1 + xH2 + 360.
@@ -337,7 +324,7 @@ func cie2000distance(col1 cielab, col2 cielab) float64 {
 		} else {
 			xHX = xH1 + xH2
 		}
-		xHX /= 2
+		xHX /= 2.
 	}
 	xTX := 1. - 0.17*math.Cos(deg2rad*(xHX-30.)) +
 		0.24*math.Cos(deg2rad*(2.*xHX)) +
