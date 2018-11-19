@@ -134,7 +134,7 @@ func closestC64Color(color cielab) int {
 	return bestIndex
 }
 
-func colorDistance(color1 color.RGBA, color2 color.RGBA) float64 {
+func rgbDistance(color1 color.RGBA, color2 color.RGBA) float64 {
 	return math.Pow(float64(color1.R)-float64(color2.R), 2) +
 		math.Pow(float64(color1.G)-float64(color2.G), 2) +
 		math.Pow(float64(color1.B)-float64(color2.B), 2)
